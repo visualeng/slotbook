@@ -7,7 +7,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "tsx watch src/server/index.ts",
+    "dev": "tsx watch --env-file-if-exists=.env src/server/index.ts",
     "dev:web": "vite",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "npm run clean && npm run build:server && npm run build:web",

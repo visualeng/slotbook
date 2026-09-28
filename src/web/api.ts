@@ -4,10 +4,15 @@ import type { Booking, Resource, Schedule, StreamEvent } from "../shared/types";
 export type ApiError = Error & { code: string; details: unknown };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-	const response = await fetch(path, {
-		...init,
-		headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
-	});
+	// content-type ставим только когда тело действительно есть: fastify отвечает
+	// 400 на запрос с content-type: application/json и пустым телом, а DELETE
+	// отправляется как раз без тела
+	const headers: Record<string, string> = { ...(init?.headers as Record<string, string>) };
+	if (init?.body !== undefined && headers["content-type"] === undefined) {
+		headers["content-type"] = "application/json";
+	}
+
+	const response = await fetch(path, { ...init, headers });
 
 	if (!response.ok) {
 		const body = (await response.json().catch(() => null)) as {
