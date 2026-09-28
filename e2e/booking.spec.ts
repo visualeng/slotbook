@@ -25,11 +25,9 @@ async function openAs(page: Page, name: string): Promise<void> {
 
 /** Отменяет всё, что этот пользователь забронировал на текущем дне. */
 async function cancelMine(page: Page): Promise<void> {
-	while ((await page.getByTestId("mine-cancel").count()) > 0) {
+	const items = page.getByTestId("mine-item");
+	for (let guard = 0; (await items.count()) > 0 && guard < 10; guard += 1) {
 		await page.getByTestId("mine-cancel").first().click();
-		await expect(page.getByTestId("mine-item")).toHaveCount(
-			(await page.getByTestId("mine-cancel").count()) > 0 ? 1 : 0,
-		);
 	}
 	await expect(page.getByTestId("mine-empty")).toBeVisible();
 }
@@ -69,22 +67,16 @@ test("слот бронируется и освобождается отмено
 test("диапазон не перепрыгивает через занятый слот", async ({ page, browser }) => {
 	// отдельный ресурс: тесты не должны зависеть от того, что наделал предыдущий
 	const resource = { index: 1 };
-
 	const theirContext = await browser.newContext();
+
 	try {
 		const theirPage = await theirContext.newPage();
 		await openAs(theirPage, viewer());
 		await theirPage.getByTestId("resource-select").selectOption({ index: resource.index });
 		await expect(theirPage.locator(SLOT).first()).toBeVisible();
 
-		// сосед занимает середину дня
+		// сосед занимает середину дня и держит бронь до конца теста
 		await bookSlot(theirPage, theirPage.locator(DAY_SLOT).nth(1), "занято соседом");
-		const busyRow = theirPage
-			.locator("tr", { has: theirPage.locator(`${SLOT}[data-state="MINE"]`) })
-			.first();
-		const busyTime = (await busyRow.locator("td.time").textContent()) ?? "";
-		await theirPage.getByTestId("mine-cancel").click();
-		await expect(theirPage.getByTestId("mine-empty")).toBeVisible();
 
 		await openAs(page, viewer());
 		await page.getByTestId("resource-select").selectOption({ index: resource.index });
@@ -92,15 +84,24 @@ test("диапазон не перепрыгивает через занятый
 
 		const free = page.locator(DAY_SLOT);
 		await bookSlot(page, free.first(), "начинаю диапазон");
-		// последний свободный слот дня находится за занятым
-		await free.last().click();
+
+		// последний свободный слот дня находится за занятым соседом: клик по
+		// нему не должен собрать диапазон через него, а начать выбор заново
+		const lastFree = free.last();
+		const lastFreeTime =
+			(await lastFree.locator("xpath=preceding-sibling::td").first().textContent()) ?? "";
+		await lastFree.click();
 
 		await expect(page.getByTestId("notice")).toContainText("выбор начат заново");
-		await expect(page.getByTestId("selection-range")).not.toContainText(
-			busyTime.split("–")[0] as string,
-		);
+		await expect(page.getByTestId("selection-range")).toHaveText(lastFreeTime);
+
+		// выбор восстановился: этот слот бронируется как обычный одиночный
+		await page.getByTestId("submit-booking").click();
+		await expect(page.getByTestId("notice")).toContainText("занято");
+		await expect(page.locator(`${SLOT}[data-state="MINE"]`)).toHaveCount(2);
 
 		await cancelMine(page);
+		await cancelMine(theirPage);
 	} finally {
 		await theirContext.close();
 	}
