@@ -1,0 +1,54 @@
+{
+  "name": "slotbook",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Сервис бронирования ресурсов: интервальные слоты, защита от двойного брони в БД, live-обновления",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server/index.ts",
+    "dev:web": "vite",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && npm run build:server && npm run build:web",
+    "build:server": "esbuild src/server/index.ts --bundle --platform=node --format=cjs --packages=external --target=node22 --sourcemap --outfile=dist/server/index.js",
+    "build:web": "vite build",
+    "start": "node dist/server/index.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "test": "vitest run --no-file-parallelism",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration --no-file-parallelism",
+    "test:web": "vitest run tests/web",
+    "e2e": "playwright test",
+    "e2e:install": "playwright install --with-deps chromium"
+  },
+  "dependencies": {
+    "@fastify/cors": "11.3.0",
+    "@fastify/static": "10.1.5",
+    "fastify": "5.12.5",
+    "pg": "8.23.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.14",
+    "@playwright/test": "1.63.0",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
+    "@types/node": "26.6.3",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "esbuild": "^0.28.2",
+    "jsdom": "30.1.1",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.1",
+    "vitest": "5.0.2"
+  }
+}
